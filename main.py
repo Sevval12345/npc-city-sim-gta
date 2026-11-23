@@ -1,5 +1,9 @@
+import os
+
 import numpy as np
 import pygame
+from PIL import Image
+
 from sim import collide_grid
 from behavior import (apply_shot_goap, update_states, collide_rects,
                       compute_cover_points, WANDER, FLEE, TO_COVER, HIDE)
@@ -12,7 +16,12 @@ FLEE_SPEED = 150.0
 HEAR_RADIUS = 150.0
 FLEE_TIME = 3.0
 HIDE_TIME = 4.0
-FLEE_COST = 1.2   # "kaç" planının sabit maliyeti (sn)
+FLEE_COST = 1.2
+
+# GIF kaydı ayarları
+REC_EVERY = 4          # 60 FPS / 4 = ~15 FPS GIF
+REC_MAX = 180          # en fazla 180 kare (~12 sn)
+REC_SIZE = (640, 480)
 
 # Binalar: [x1, y1, x2, y2]
 buildings = np.array([
@@ -46,9 +55,21 @@ pygame.init()
 screen = pygame.display.set_mode((W, H))
 clock = pygame.time.Clock()
 running = True
-shot_rings = []        # [x, y, kalan_sure]
-markers = []           # siper noktaları (debug), [x, y]
+shot_rings = []
+markers = []
 marker_t = 0.0
+
+recording = False
+rec_frames = []
+frame_no = 0
+
+
+def save_gif(frames):
+    os.makedirs("docs", exist_ok=True)
+    frames[0].save("docs/demo.gif", save_all=True, append_images=frames[1:],
+                   duration=int(1000 / 15), loop=0, optimize=True)
+    print(f"docs/demo.gif kaydedildi ({len(frames)} kare)")
+
 
 COLORS = {
     WANDER: (220, 220, 220),
@@ -62,6 +83,17 @@ while running:
     for e in pygame.event.get():
         if e.type == pygame.QUIT:
             running = False
+        elif e.type == pygame.KEYDOWN and e.key == pygame.K_r:
+            if not recording:
+                recording = True
+                rec_frames = []
+                frame_no = 0
+                print("Kayıt başladı (durdurmak için tekrar R)")
+            else:
+                recording = False
+                if rec_frames:
+                    save_gif(rec_frames)
+                rec_frames = []
         elif e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
             sx, sy = float(e.pos[0]), float(e.pos[1])
             compute_cover_points(buildings, sx, sy, RADIUS, float(W), float(H),
@@ -100,10 +132,24 @@ while running:
         pygame.draw.circle(screen, (255, 200, 60), (ring[0], ring[1]), max(r, 1), 2)
     shot_rings = [r for r in shot_rings if r[2] > 0]
 
+    # GIF kaydı: kare yakala
+    if recording:
+        frame_no += 1
+        if frame_no % REC_EVERY == 0:
+            raw = pygame.image.tostring(screen, "RGB")
+            img = Image.frombytes("RGB", (W, H), raw).resize(REC_SIZE)
+            rec_frames.append(img.convert("P", palette=Image.ADAPTIVE, colors=64))
+            if len(rec_frames) >= REC_MAX:
+                recording = False
+                save_gif(rec_frames)
+                rec_frames = []
+
     fleeing = int(np.count_nonzero(state == FLEE))
     cover = int(np.count_nonzero((state == TO_COVER) | (state == HIDE)))
+    rec_tag = " | KAYIT" if recording else ""
     pygame.display.set_caption(
-        f"{N} ajan | FPS: {clock.get_fps():.0f} | kaçan: {fleeing} | siperde: {cover} | Sol tık: silah sesi"
+        f"{N} ajan | FPS: {clock.get_fps():.0f} | kaçan: {fleeing} | siperde: {cover}"
+        f" | Sol tık: silah sesi | R: GIF kaydı{rec_tag}"
     )
     pygame.display.flip()
 
