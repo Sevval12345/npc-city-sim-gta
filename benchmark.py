@@ -1,8 +1,6 @@
 import platform
 import time
-
 import numpy as np
-
 from sim import collide_bruteforce, collide_grid
 
 W, H = 800, 600
@@ -12,7 +10,6 @@ SIZES = [1000, 2000, 5000, 10000, 20000]
 BUDGET_S = 3.0   # her ölçüm için yaklaşık süre
 MIN_STEPS = 20
 MAX_STEPS = 500
-
 
 def make_agents(n):
     rng = np.random.default_rng(42)
@@ -35,7 +32,6 @@ def step(pos, vel, mode):
     else:
         collide_bruteforce(pos, vel, RADIUS)
 
-
 def bench(n, mode):
     pos, vel = make_agents(n)
     for _ in range(5):  # ısınma (Numba derlemesi + cache)
@@ -50,10 +46,8 @@ def bench(n, mode):
         times.append((time.perf_counter() - t0) * 1000)
     return float(np.median(times))
 
-
 def fmt(x):
     return f"{x:.2f}".replace(".", ",")
-
 
 def main():
     rows = []
@@ -80,7 +74,6 @@ def main():
     with open("benchmark_results.md", "w", encoding="utf-8") as f:
         f.write(table + "\n\n" + info + "\n")
     print("\nbenchmark_results.md dosyasına yazıldı.")
-
 
 if __name__ == "__main__":
     main()
