@@ -1,4 +1,4 @@
-# NPC City Sim
+# NPC City Sim (GTA)
 
 Python ile sıfırdan yazılmış 2D kalabalık simülasyonu. NumPy + Numba kullanır, oyun motoru yoktur.
 
